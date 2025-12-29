@@ -1,14 +1,18 @@
+
 name: Deploy to DGX Cloud
+
 on:
   workflow_dispatch:   # Enables manual trigger
   push:
     branches:
       - main
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
     environment: dgx-cloud-prod  # Must match your GitHub Environment name
-steps:
+
+    steps:
       - name: Checkout repository
         uses: actions/checkout@v3
 
