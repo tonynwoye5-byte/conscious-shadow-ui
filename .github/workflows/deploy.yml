@@ -1,0 +1,67 @@
+
+name: Deploy to DGX Cloud
+
+# Triggers: manual + on push to main
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    # IMPORTANT: this must match your Environment name in Settings → Environments
+    environment: dgx-cloud-prod
+
+    permissions:
+      contents: read
+
+    steps:
+      # 1) Checkout repo
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # 2) Export environment secrets to the job runtime
+      - name: Export DGX/NIM/Riva secrets
+        run: |
+          echo "NIM_API_URL=${{ secrets.NIM_API_URL }}" >> $GITHUB_ENV
+          echo "NGC_API_KEY=${{ secrets.NGC_API_KEY }}" >> $GITHUB_ENV
+          echo "NVIDIA_SPEECH_API_KEY=${{ secrets.NVIDIA_SPEECH_API_KEY }}" >> $GITHUB_ENV
+          echo "RIVA_ASR_FUNCTION_ID=${{ secrets.RIVA_ASR_FUNCTION_ID }}" >> $GITHUB_ENV
+          echo "RIVA_TTS_FUNCTION_ID=${{ secrets.RIVA_TTS_FUNCTION_ID }}" >> $GITHUB_ENV
+
+      # 3) (Optional) Install dependencies if you have a Node project
+      - name: Install Node dependencies
+        run: |
+          if [ -f package.json ]; then
+            npm ci
+          else
+            echo "No package.json found; skipping install."
+          fi
+
+      # 4) (Optional) Run tests
+      - name: Run tests (optional)
+        run: |
+          if [ -f package.json ]; then
+            npm test --if-present
+          else
+            echo "No tests configured; skipping."
+          fi
+
+      # 5) Deploy step placeholder: call DGX/NIM/Riva or your script
+      - name: Deploy to DGX Cloud
+        run: |
+          echo "Deploying with the following configuration:"
+          echo "  NIM_API_URL=$NIM_API_URL"
+          echo "  RIVA_ASR_FUNCTION_ID=$RIVA_ASR_FUNCTION_ID"
+          echo "  RIVA_TTS_FUNCTION_ID=$RIVA_TTS_FUNCTION_ID"
+          echo "If you self-host later, uncomment the docker commands below."
+
+          # EXAMPLE: Authenticate to nvcr.io and pull a NIM container (self-host scenario)
+          # echo "$NGC_API_KEY" | docker login nvcr.io -u '$oauthtoken' --password-stdin
+          # docker pull nvcr.io/nvidia/nim/llm:latest
+
+          # EXAMPLE: your deployment script (replace with real command)
+          # ./scripts/deploy_dgx.sh
