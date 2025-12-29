@@ -1,5 +1,13 @@
+ name: Deploy to DGX Cloud
+  run: 
+    echo "Logging in to NVIDIA NGC registry..."
+    echo "${{ secrets.NGC_API_KEY }}" | docker login nvcr.io -u '$oauthtoken' --password-stdin
 
-name: Deploy to DGX Cloud
+    echo "Pulling NIM container..."
+    docker pull nvcr.io/nvidia/nim/llm:latest
+
+    echo "Starting NIM container..."
+    docker run --gpus all -d -p 8000:8000 nvcr.io/nvidia/nim/llm:latest
 
 # Triggers: manual + on push to main
 on:
