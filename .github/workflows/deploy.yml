@@ -2,31 +2,48 @@
 name: Deploy to DGX Cloud
 
 on:
-  workflow_dispatch:   # manual trigger
+  workflow_dispatch:   # Enables manual trigger
   push:
     branches:
       - main
 
 jobs:
-  sanity:
+  deploy:
     runs-on: ubuntu-latest
-    environment: dgx-cloud-prod
+    environment: dgx-cloud-prod  # Must match your Environment name
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Confirm environment and secrets are present
+      - name: Export DGX/NIM/Riva secrets
         run: |
-          echo "Environment: dgx-cloud-prod "
-          test -n "${{ secrets.NIM_API_URL }}" || (echo "Missing NIM_API_URL secret" && exit 1)
-          test -n "${{ secrets.NGC_API_KEY }}" || (echo "Missing NGC_API_KEY secret" && exit 1)
-          test -n "${{ secrets.NVIDIA_SPEECH_API_KEY }}" || (echo "Missing NVIDIA_SPEECH_API_KEY secret" && exit 1)
-          test -n "${{ secrets.RIVA_ASR_FUNCTION_ID }}" || (echo "Missing RIVA_ASR_FUNCTION_ID secret" && exit 1)
-          test -n "${{ secrets.RIVA_TTS_FUNCTION_ID }}" || (echo "Missing RIVA_TTS_FUNCTION_ID secret" && exit 1)
-          echo "All required secrets found "
+          echo "NIM_API_URL=${{ secrets.NIM_API_URL }}" >> $GITHUB_ENV
+          echo "NGC_API_KEY=${{ secrets.NGC_API_KEY }}" >> $GITHUB_ENV
+          echo "NVIDIA_SPEECH_API_KEY=${{ secrets.NVIDIA_SPEECH_API_KEY }}" >> $GITHUB_ENV
+          echo "RIVA_ASR_FUNCTION_ID=${{ secrets.RIVA_ASR_FUNCTION_ID }}" >> $GITHUB_ENV
+          echo "RIVA_TTS_FUNCTION_ID=${{ secrets.RIVA_TTS_FUNCTION_ID }}" >> $GITHUB_ENV
 
-      - name: Print variables (masked)
+      - name: Install Node dependencies
         run: |
-          echo "NIM_API_URL is set (value masked by GitHub)"
-          echo "Will use DGX Cloud hosted endpoints from your app, not from CI."
+          if [ -f package.json ]; then
+            npm ci
+          else
+            echo "No package.json found; skipping install."
+          fi
+
+      # --- choose ONE of the following deploy steps ---
+
+      # Hosted runner (no GPU): trigger deployment in DGX Cloud
+      - name: Deploy to DGX Cloud (trigger)
+        run: |
+          echo "Trigger DGX Cloud deployment here."
+          echo "NIM_API_URL=$NIM_API_URL"
+          # curl or SSH to your DGX-side deploy script
+
+      # Self-hosted runner (with GPU): run NIM container locally
+      # - name: Deploy to DGX Cloud (self-hosted runner)
+      #   run: |
+      #     echo "${{ secrets.NGC_API_KEY }}" | docker login nvcr.io -u '$oauthtoken' --password-stdin
+      #     docker pull nvcr.io/nvidia/nim/llm:latest
+      #     docker run --gpus all -d -p 8000:8000 nvcr.io/nvidia/nim/llm:latest
