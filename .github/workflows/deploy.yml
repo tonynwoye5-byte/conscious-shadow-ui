@@ -2,43 +2,31 @@
 name: Deploy to DGX Cloud
 
 on:
-  workflow_dispatch:   # Enables manual trigger
+  workflow_dispatch:   # manual trigger
   push:
     branches:
       - main
 
 jobs:
-  deploy:
+  sanity:
     runs-on: ubuntu-latest
-    environment: dgx-cloud-prod  # Must match your GitHub Environment name
+    environment: dgx-cloud-prod
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Export DGX/NIM/Riva secrets
+      - name: Confirm environment and secrets are present
         run: |
-          echo "NIM_API_URL=${{ secrets.NIM_API_URL }}" >> $GITHUB_ENV
-          echo "NGC_API_KEY=${{ secrets.NGC_API_KEY }}" >> $GITHUB_ENV
-          echo "NVIDIA_SPEECH_API_KEY=${{ secrets.NVIDIA_SPEECH_API_KEY }}" >> $GITHUB_ENV
-          echo "RIVA_ASR_FUNCTION_ID=${{ secrets.RIVA_ASR_FUNCTION_ID }}" >> $GITHUB_ENV
-          echo "RIVA_TTS_FUNCTION_ID=${{ secrets.RIVA_TTS_FUNCTION_ID }}" >> $GITHUB_ENV
+          echo "Environment: dgx-cloud-prod "
+          test -n "${{ secrets.NIM_API_URL }}" || (echo "Missing NIM_API_URL secret" && exit 1)
+          test -n "${{ secrets.NGC_API_KEY }}" || (echo "Missing NGC_API_KEY secret" && exit 1)
+          test -n "${{ secrets.NVIDIA_SPEECH_API_KEY }}" || (echo "Missing NVIDIA_SPEECH_API_KEY secret" && exit 1)
+          test -n "${{ secrets.RIVA_ASR_FUNCTION_ID }}" || (echo "Missing RIVA_ASR_FUNCTION_ID secret" && exit 1)
+          test -n "${{ secrets.RIVA_TTS_FUNCTION_ID }}" || (echo "Missing RIVA_TTS_FUNCTION_ID secret" && exit 1)
+          echo "All required secrets found "
 
-      - name: Install Node dependencies
+      - name: Print variables (masked)
         run: |
-          if [ -f package.json ]; then
-            npm ci
-          else
-            echo "No package.json found; skipping install."
-          fi
-
-      - name: Deploy to DGX Cloud
-        run: |
-          echo "Logging in to NVIDIA NGC registry..."
-          echo "${{ secrets.NGC_API_KEY }}" | docker login nvcr.io -u '$oauthtoken' --password-stdin
-
-          echo "Pulling NIM container..."
-          docker pull nvcr.io/nvidia/nim/llm:latest
-
-          echo "Starting NIM container..."
-          docker run --gpus all -d -p 8000:8000 nvcr.io/nvidia/nim/llm:latest
+          echo "NIM_API_URL is set (value masked by GitHub)"
+          echo "Will use DGX Cloud hosted endpoints from your app, not from CI."
